@@ -38,6 +38,9 @@ function loadData() {
       state = JSON.parse(raw);
       if (!state.pins) state.pins = [];
       if (!state.trips) state.trips = [];
+      // マイグレーション: 旧データに updatedAt が無ければ 0 を補完
+      state.pins.forEach(p => { if (typeof p.updatedAt !== 'number') p.updatedAt = 0; });
+      state.trips.forEach(t => { if (typeof t.updatedAt !== 'number') t.updatedAt = 0; });
     }
   } catch (e) {
     console.error('データ読み込みエラー', e);
@@ -336,7 +339,8 @@ function savePin() {
     date: dateUnknown ? '' : document.getElementById('pin-date').value,
     dateUnknown,
     tripId: document.getElementById('pin-trip').value || null,
-    memo: document.getElementById('pin-memo').value.trim()
+    memo: document.getElementById('pin-memo').value.trim(),
+    updatedAt: Date.now()
   };
 
   if (editingPinId) {
@@ -400,7 +404,8 @@ function saveTrip() {
 
   const data = {
     name,
-    color: document.getElementById('trip-color').value
+    color: document.getElementById('trip-color').value,
+    updatedAt: Date.now()
   };
 
   if (editingTripId) {
@@ -510,22 +515,98 @@ async function exportMapImage() {
   }
 }
 
+// 取り込み待ちのデータ（モーダル表示中に保持）
+let pendingImport = null;
+
 function importData(file) {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
       if (!data.pins || !data.trips) throw new Error('無効なファイル');
-      if (!confirm('既存データを置き換えますか？')) return;
-      state = data;
-      saveData();
-      renderAll();
-      alert('インポートしました');
+
+      // updatedAt が無い旧形式データは 0 を補完
+      data.pins.forEach(p => { if (typeof p.updatedAt !== 'number') p.updatedAt = 0; });
+      data.trips.forEach(t => { if (typeof t.updatedAt !== 'number') t.updatedAt = 0; });
+
+      pendingImport = data;
+      openImportModal(data);
     } catch (err) {
       alert('インポートエラー: ' + err.message);
     }
   };
   reader.readAsText(file);
+}
+
+function openImportModal(data) {
+  // サマリ計算
+  const importedPinIds = new Set(data.pins.map(p => p.id));
+  const importedTripIds = new Set(data.trips.map(t => t.id));
+  const newPins = data.pins.filter(p => !state.pins.find(local => local.id === p.id)).length;
+  const newTrips = data.trips.filter(t => !state.trips.find(local => local.id === t.id)).length;
+  const commonPins = data.pins.length - newPins;
+  const commonTrips = data.trips.length - newTrips;
+
+  const summary = `📥 取込ファイル: ピン ${data.pins.length}件 / 旅程 ${data.trips.length}件\n` +
+                  `　うち新規追加: ピン ${newPins}件、旅程 ${newTrips}件\n` +
+                  `　既存と重複: ピン ${commonPins}件、旅程 ${commonTrips}件\n` +
+                  `📍 現在の端末: ピン ${state.pins.length}件 / 旅程 ${state.trips.length}件`;
+
+  document.getElementById('import-summary').textContent = summary;
+  document.getElementById('import-modal').classList.remove('hidden');
+}
+
+function closeImportModal() {
+  document.getElementById('import-modal').classList.add('hidden');
+  pendingImport = null;
+}
+
+function performMergeImport() {
+  if (!pendingImport) return;
+  const data = pendingImport;
+
+  // 旅程をマージ（ID一致なら updatedAt が新しい方、無ければそのまま追加）
+  let tripsAdded = 0, tripsUpdated = 0;
+  data.trips.forEach(imp => {
+    const local = state.trips.find(t => t.id === imp.id);
+    if (!local) {
+      state.trips.push(imp);
+      tripsAdded++;
+    } else if ((imp.updatedAt || 0) > (local.updatedAt || 0)) {
+      Object.assign(local, imp);
+      tripsUpdated++;
+    }
+  });
+
+  // ピンも同様にマージ
+  let pinsAdded = 0, pinsUpdated = 0;
+  data.pins.forEach(imp => {
+    const local = state.pins.find(p => p.id === imp.id);
+    if (!local) {
+      state.pins.push(imp);
+      pinsAdded++;
+    } else if ((imp.updatedAt || 0) > (local.updatedAt || 0)) {
+      Object.assign(local, imp);
+      pinsUpdated++;
+    }
+  });
+
+  saveData();
+  renderAll();
+  closeImportModal();
+  alert(`結合インポート完了\n\n` +
+        `ピン: ${pinsAdded}件追加 / ${pinsUpdated}件更新\n` +
+        `旅程: ${tripsAdded}件追加 / ${tripsUpdated}件更新`);
+}
+
+function performReplaceImport() {
+  if (!pendingImport) return;
+  if (!confirm('本当に既存データをすべて削除して置き換えますか？\nこの操作は取り消せません。')) return;
+  state = pendingImport;
+  saveData();
+  renderAll();
+  closeImportModal();
+  alert('置き換えインポート完了');
 }
 
 // ============================================
@@ -589,12 +670,20 @@ function bindEvents() {
     e.target.value = '';
   };
 
+  // 取込モード選択モーダル
+  document.getElementById('import-merge-btn').onclick = performMergeImport;
+  document.getElementById('import-replace-btn').onclick = performReplaceImport;
+  document.getElementById('import-cancel-btn').onclick = closeImportModal;
+
   // モーダル外クリックで閉じる
   document.getElementById('pin-modal').onclick = (e) => {
     if (e.target.id === 'pin-modal') closePinModal();
   };
   document.getElementById('trip-modal').onclick = (e) => {
     if (e.target.id === 'trip-modal') closeTripModal();
+  };
+  document.getElementById('import-modal').onclick = (e) => {
+    if (e.target.id === 'import-modal') closeImportModal();
   };
 }
 

@@ -366,6 +366,75 @@ section:last-child {
   display: none !important;
 }
 
+/* 取込モード選択モーダル */
+.import-summary {
+  color: #6c757d;
+  font-size: 13px;
+  margin-bottom: 16px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.import-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.import-option {
+  text-align: left;
+  padding: 14px 16px;
+  background: white;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.import-option:hover {
+  background: #f1f3f5;
+  border-color: #adb5bd;
+}
+
+.import-option.primary {
+  border-color: #2c3e50;
+  background: #f8f9fa;
+}
+
+.import-option.primary:hover {
+  background: #e9ecef;
+  border-color: #1a252f;
+}
+
+.import-option .opt-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #2c3e50;
+  margin-bottom: 4px;
+}
+
+.import-option .opt-desc {
+  font-size: 12px;
+  color: #6c757d;
+  line-height: 1.5;
+}
+
+.import-cancel {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.import-cancel:hover {
+  color: #495057;
+  text-decoration: underline;
+}
+
 /* Leafletのカスタムアイコン */
 .custom-pin {
   width: 12px;

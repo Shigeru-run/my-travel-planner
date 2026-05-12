@@ -143,6 +143,25 @@
   </div>
 </div>
 
+<!-- 取込モード選択モーダル -->
+<div id="import-modal" class="modal hidden">
+  <div class="modal-content">
+    <h3>取込方法を選んでください</h3>
+    <p class="import-summary" id="import-summary"></p>
+    <div class="import-options">
+      <button type="button" id="import-merge-btn" class="import-option primary">
+        <div class="opt-title">🔀 結合（推奨）</div>
+        <div class="opt-desc">既存データを残したまま、新しい情報を追加・更新します。同じピンが両側にある場合は、更新日時が新しい方を採用します。</div>
+      </button>
+      <button type="button" id="import-replace-btn" class="import-option">
+        <div class="opt-title">♻️ 置き換え</div>
+        <div class="opt-desc">既存データをすべて削除して、JSONファイルの内容で完全に上書きします。</div>
+      </button>
+      <button type="button" id="import-cancel-btn" class="import-cancel">キャンセル</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
 <script src="app.js"></script>
