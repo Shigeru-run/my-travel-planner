@@ -395,11 +395,27 @@ section:last-child {
   }
   #sidebar {
     width: 100%;
-    height: 40vh;
+    height: 45vh;
     border-right: none;
     border-bottom: 1px solid #dee2e6;
+    display: flex;
+    flex-direction: column;
   }
   #map {
-    height: 60vh;
+    height: 55vh;
+  }
+
+  /* スマホでは操作ボタンを上に配置（スクロール不要に） */
+  #sidebar > header        { order: 0; }
+  #sidebar > .search-section { order: 1; }
+  #sidebar > .data-section   { order: 2; }
+  #sidebar > .stats          { order: 3; }
+  #sidebar > .trips-section  { order: 4; }
+  #sidebar > .pins-section   { order: 5; }
+  #sidebar > .hint           { order: 6; }
+
+  /* スマホでは一覧の高さを抑える */
+  #trips-list, #pins-list {
+    max-height: 120px;
   }
 }
