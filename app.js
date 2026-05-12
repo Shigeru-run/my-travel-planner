@@ -103,7 +103,9 @@ function buildPopupHtml(pin) {
   const trip = state.trips.find(t => t.id === pin.tripId);
   const statusLabel = pin.status === 'visited' ? '✅ 訪問済み' : '📅 訪問予定';
   const tripLabel = trip ? `<div class="popup-meta">🗺️ ${escapeHtml(trip.name)}</div>` : '';
-  const dateLabel = pin.date ? `<div class="popup-meta">📆 ${pin.date}</div>` : '';
+  const dateLabel = pin.dateUnknown
+    ? `<div class="popup-meta">📆 日付不明</div>`
+    : (pin.date ? `<div class="popup-meta">📆 ${pin.date}</div>` : '');
   const memo = pin.memo ? `<div class="popup-memo">${escapeHtml(pin.memo)}</div>` : '';
 
   return `
@@ -150,7 +152,13 @@ function renderPolylines() {
 
     const tripPins = state.pins
       .filter(p => p.tripId === trip.id)
-      .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+      .sort((a, b) => {
+        // 日付不明・空のピンは末尾に
+        const aUnknown = a.dateUnknown || !a.date;
+        const bUnknown = b.dateUnknown || !b.date;
+        if (aUnknown !== bUnknown) return aUnknown ? 1 : -1;
+        return (a.date || '').localeCompare(b.date || '');
+      });
 
     if (tripPins.length < 2) return;
 
@@ -225,7 +233,12 @@ function renderPinsList() {
   if (filter !== 'all') {
     filtered = filtered.filter(p => p.status === filter);
   }
-  filtered = filtered.slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  filtered = filtered.slice().sort((a, b) => {
+    const aUnknown = a.dateUnknown || !a.date;
+    const bUnknown = b.dateUnknown || !b.date;
+    if (aUnknown !== bUnknown) return aUnknown ? 1 : -1;
+    return (a.date || '').localeCompare(b.date || '');
+  });
 
   if (filtered.length === 0) {
     ul.innerHTML = '<li class="empty-msg">ピンはまだありません</li>';
@@ -235,9 +248,12 @@ function renderPinsList() {
   filtered.forEach(pin => {
     const li = document.createElement('li');
     li.className = 'pin-item';
+    const dateText = pin.dateUnknown
+      ? ' · 日付不明'
+      : (pin.date ? ' · ' + pin.date : '');
     li.innerHTML = `
       <span class="pin-status-dot ${pin.status}"></span>
-      <span class="pin-name">${escapeHtml(pin.name)}${pin.date ? ' · ' + pin.date : ''}</span>
+      <span class="pin-name">${escapeHtml(pin.name)}${dateText}</span>
     `;
     li.onclick = () => {
       map.setView([pin.lat, pin.lng], 10);
@@ -280,15 +296,26 @@ function openPinModal(pinId) {
     document.getElementById('pin-date').value = pin.date || '';
     document.getElementById('pin-trip').value = pin.tripId || '';
     document.getElementById('pin-memo').value = pin.memo || '';
+    document.getElementById('pin-date-unknown').checked = !!pin.dateUnknown;
     deleteBtn.classList.remove('hidden');
   } else {
     title.textContent = 'ピンを追加';
     document.getElementById('pin-form').reset();
+    document.getElementById('pin-date-unknown').checked = false;
     deleteBtn.classList.add('hidden');
   }
 
+  updateDateInputState();
   modal.classList.remove('hidden');
   document.getElementById('pin-name').focus();
+}
+
+function updateDateInputState() {
+  // 日付不明チェック時、日付入力欄を無効化
+  const checked = document.getElementById('pin-date-unknown').checked;
+  const dateInput = document.getElementById('pin-date');
+  dateInput.disabled = checked;
+  if (checked) dateInput.value = '';
 }
 
 function closePinModal() {
@@ -301,10 +328,13 @@ function savePin() {
   const name = document.getElementById('pin-name').value.trim();
   if (!name) return;
 
+  const dateUnknown = document.getElementById('pin-date-unknown').checked;
+
   const data = {
     name,
     status: document.getElementById('pin-status').value,
-    date: document.getElementById('pin-date').value,
+    date: dateUnknown ? '' : document.getElementById('pin-date').value,
+    dateUnknown,
     tripId: document.getElementById('pin-trip').value || null,
     memo: document.getElementById('pin-memo').value.trim()
   };
@@ -521,6 +551,7 @@ function bindEvents() {
     savePin();
   };
   document.getElementById('pin-cancel-btn').onclick = closePinModal;
+  document.getElementById('pin-date-unknown').onchange = updateDateInputState;
   document.getElementById('pin-delete-btn').onclick = () => {
     if (editingPinId && confirm('このピンを削除しますか？')) {
       deletePin(editingPinId);
@@ -565,6 +596,15 @@ function bindEvents() {
   document.getElementById('trip-modal').onclick = (e) => {
     if (e.target.id === 'trip-modal') closeTripModal();
   };
+}
+
+// Service Worker登録（PWA・オフライン対応）
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => {
+      console.warn('SW登録失敗:', err);
+    });
+  });
 }
 
 // 起動

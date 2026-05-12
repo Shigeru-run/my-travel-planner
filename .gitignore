@@ -1,2 +1,5 @@
 .DS_Store
-*.json
+
+# 訪問データのバックアップ・地図画像エクスポート（個人データ）
+travel-planner-*.json
+travel-map-*.png

@@ -8,6 +8,10 @@ body {
   font-family: -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif;
   color: #333;
   overflow: hidden;
+  /* iOS PWAでステータスバー領域に被らないように */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: #2c3e50; /* セーフエリア外の色（テーマカラー） */
 }
 
 #app {
@@ -290,6 +294,30 @@ section:last-child {
   border-radius: 4px;
   cursor: pointer;
   margin-top: 4px;
+}
+
+/* 日付不明など、インラインのチェックボックス用 */
+.modal-content label.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -4px;
+  margin-bottom: 14px;
+  font-weight: 400;
+  color: #6c757d;
+  cursor: pointer;
+}
+
+.modal-content label.checkbox-row input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
+
+.modal-content input[type="date"]:disabled {
+  background: #f1f3f5;
+  color: #adb5bd;
+  cursor: not-allowed;
 }
 
 .modal-content textarea {
