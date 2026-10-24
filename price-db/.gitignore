@@ -1,9 +1,0 @@
-# 価格データは機密のため Git に登録しない（テンプレートのみ登録）
-*.xlsx
-*.xlsm
-*.csv
-!templates/*.xlsx
-output/
-config.ini
-.venv/
-__pycache__/
